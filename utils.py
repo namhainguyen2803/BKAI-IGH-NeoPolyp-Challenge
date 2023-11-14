@@ -1,17 +1,18 @@
 import argparse
 import torch
-def str2bool(v):
-    if v.lower() in ['true', 1]:
-        return True
-    elif v.lower() in ['false', 0]:
-        return False
-    else:
-        raise argparse.ArgumentTypeError('Boolean value expected.')
-
+import torch.nn as nn
+import torch.nn.functional as F
 
 def count_params(model):
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
+
+def _to_one_hot(y, num_classes):
+    scatter_dim = len(y.size())
+    y_tensor = y.view(*y.size(), -1)
+    zeros = torch.zeros(*y.size(), num_classes, dtype=y.dtype)
+
+    return zeros.scatter(scatter_dim, y_tensor, 1)
 
 class AverageMeter(object):
     """Computes and stores the average and current value"""
@@ -31,26 +32,44 @@ class AverageMeter(object):
         self.count += n
         self.avg = self.sum / self.count
 
-def iou_score(output, target):
-    smooth = 1e-5
+def weights_init(model):
+    if isinstance(model, nn.Linear):
+        # Xavier Distribution
+        torch.nn.init.xavier_uniform_(model.weight)
 
-    if torch.is_tensor(output):
-        output = torch.sigmoid(output).data.cpu().numpy()
-    if torch.is_tensor(target):
-        target = target.data.cpu().numpy()
-    output_ = output > 0.5
-    target_ = target > 0.5
-    intersection = (output_ & target_).sum()
-    union = (output_ | target_).sum()
+def save_model(model, optimizer, path):
+    checkpoint = {
+        "model": model.state_dict(),
+        "optimizer": optimizer.state_dict(),
+    }
+    torch.save(checkpoint, path)
 
-    return (intersection + smooth) / (union + smooth)
+def load_model(model, optimizer, path):
+    checkpoint = torch.load(path)
+    model.load_state_dict(checkpoint["model"])
+    optimizer.load_state_dict(checkpoint['optimizer'])
+    return model, optimizer
 
 
-def dice_coef(output, target):
-    smooth = 1e-5
+def dice_score(output, y_target):
+    """
+    Handle dice score for multi-classes case:
 
-    output = torch.sigmoid(output).view(-1).data.cpu().numpy()
-    target = target.view(-1).data.cpu().numpy()
-    intersection = (output * target).sum()
+        if red segment then y_target == 0
+        if green segment then y_target == 1
+        if background then y_target == 2
 
-    return (2. * intersection + smooth) / (output.sum() + target.sum() + smooth)
+    :param output: (N, C, H, W)
+    :param y_target: (N, H, W)
+    :return:
+    """
+
+    y_predict = torch.argmax(output, dim=1)
+    one_hot_y_pred = F.one_hot(y_predict)
+    one_hot_y_target = F.one_hot(y_target)
+
+    intersection = torch.sum(one_hot_y_pred * one_hot_y_target, dim=1)
+    cardinality = torch.sum(one_hot_y_pred + one_hot_y_target, dim=1)
+
+    dice_score = (2 * intersection + 1e-6) / (cardinality + 1e-6)
+    return torch.mean(dice_score)

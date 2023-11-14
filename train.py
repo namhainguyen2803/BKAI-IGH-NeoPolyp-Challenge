@@ -3,8 +3,7 @@ from collections import OrderedDict
 from utils import *
 from models import *
 from dataloader import *
-import pandas as pd
-import numpy as np
+from criterion import *
 
 import torch
 import torch.nn as nn
@@ -12,65 +11,59 @@ import torch.optim as optim
 from torch.optim import lr_scheduler
 from collections import OrderedDict
 from torch.utils.data import Dataset, DataLoader, random_split
+import wandb
+import argparse
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def train(config, train_loader, model, criterion, optimizer):
     avg_meters = {'loss': AverageMeter(),
-                  'iou': AverageMeter()}
-
+                  'dice': AverageMeter()}
     model.train()
-
     pbar = tqdm(total=len(train_loader))
     for input, target in train_loader:
         input = input.to(DEVICE)
         target = target.to(DEVICE)
 
-        # compute output
         if config['deep_supervision']:
             outputs = model(input)
             loss = 0
             for output in outputs:
                 loss += criterion(output, target)
             loss /= len(outputs)
-            iou = iou_score(outputs[-1], target)
+            dice = dice_score(output, target)
         else:
             output = model(input)
             loss = criterion(output, target)
-            iou = iou_score(output, target)
+            dice = dice_score(output, target)
 
-        # compute gradient and do optimizing step
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
-
         avg_meters['loss'].update(loss.item(), input.size(0))
-        avg_meters['iou'].update(iou, input.size(0))
-
+        avg_meters['dice'].update(dice.item(), input.size(0))
         postfix = OrderedDict([
-            ('loss', avg_meters['loss'].avg),
-            ('iou', avg_meters['iou'].avg),
-        ])
+                ('loss', avg_meters['loss'].avg),
+                ('dice', avg_meters['dice'].avg)
+            ])
         pbar.set_postfix(postfix)
         pbar.update(1)
     pbar.close()
-
-    return OrderedDict([('loss', avg_meters['loss'].avg),
-                        ('iou', avg_meters['iou'].avg)])
+    return OrderedDict([
+                ('loss', avg_meters['loss'].avg),
+                ('dice', avg_meters['dice'].avg)
+            ])
 
 def validate(config, val_loader, model, criterion):
-    avg_meters = {'loss': AverageMeter(),
-                  'iou': AverageMeter()}
-
+    avg_meters = {"loss": AverageMeter(),
+                  "dice": AverageMeter()}
     # switch to evaluate mode
     model.eval()
-
     with torch.no_grad():
         pbar = tqdm(total=len(val_loader))
         for input, target in val_loader:
             input = input.to(DEVICE)
             target = target.to(DEVICE)
-
             # compute output
             if config['deep_supervision']:
                 outputs = model(input)
@@ -78,25 +71,24 @@ def validate(config, val_loader, model, criterion):
                 for output in outputs:
                     loss += criterion(output, target)
                 loss /= len(outputs)
-                iou = iou_score(outputs[-1], target)
+                dice = dice_score(output, target)
             else:
                 output = model(input)
                 loss = criterion(output, target)
-                iou = iou_score(output, target)
-
+                dice = dice_score(output, target)
             avg_meters['loss'].update(loss.item(), input.size(0))
-            avg_meters['iou'].update(iou, input.size(0))
-
+            avg_meters['dice'].update(dice.item(), input.size(0))
             postfix = OrderedDict([
                 ('loss', avg_meters['loss'].avg),
-                ('iou', avg_meters['iou'].avg),
+                ('dice', avg_meters['dice'].avg)
             ])
             pbar.set_postfix(postfix)
             pbar.update(1)
         pbar.close()
-
-    return OrderedDict([('loss', avg_meters['loss'].avg),
-                        ('iou', avg_meters['iou'].avg)])
+    return OrderedDict([
+                ('loss', avg_meters['loss'].avg),
+                ('dice', avg_meters['dice'].avg)
+            ])
 
 def initialize(config):
 
@@ -120,10 +112,37 @@ def initialize(config):
     else:
         raise NotImplementedError
 
-    if config['loss'] == 'BCEWithLogitsLoss':
-        criterion = nn.BCEWithLogitsLoss().to(DEVICE)
+    if config['loss'] == 'CEDiceLoss':
+        weights = torch.Tensor([[0.4, 0.55, 0.05]]).to(DEVICE)
+        criterion = CEDiceLoss(weights).to(DEVICE)
+    elif config['loss'] == 'CrossEntropyLoss':
+        criterion = nn.CrossEntropyLoss().to(DEVICE)
+    else:
+        raise NotImplementedError
 
     return model.to(DEVICE), optimizer, scheduler, criterion.to(DEVICE)
+
+def parse_arguments():
+    parser = argparse.ArgumentParser(description='Your script description here.')
+
+    # Add arguments
+    parser.add_argument('--epochs', type=int, default=2, help='Number of training epochs')
+    parser.add_argument('--deep_supervision', action='store_true', help='Use deep supervision')
+    parser.add_argument('--num_classes', type=int, default=3, help='Number of classes')
+    parser.add_argument('--input_channels', type=int, default=3, help='Number of input channels')
+    parser.add_argument('--optimizer', type=str, default='SGD', help='Optimizer choice')
+    parser.add_argument('--model', type=str, default='UNet', help='Model architecture')
+    parser.add_argument('--min_lr', type=float, default=1e-5, help='Minimum learning rate')
+    parser.add_argument('--lr', type=float, default=1e-3, help='Learning rate')
+    parser.add_argument('--loss', type=str, default='CEDiceLoss', help='Loss function')
+    parser.add_argument('--scheduler', type=str, default='CosineAnnealingLR', help='Learning rate scheduler')
+    parser.add_argument('--batch_size', type=int, default=2, help='Batch size')
+    parser.add_argument('--early_stopping', type=int, default=10, help='Early stopping patience')
+    parser.add_argument('--checkpoint_path', type=str, default='checkpoint/model.pth', help='Path to save checkpoints')
+
+    args = parser.parse_args()
+
+    return args
 
 def main():
 
@@ -132,80 +151,63 @@ def main():
 
     TRAIN_SIZE = 0.8
     VALID_SIZE = 0.2
-    BATCH_SIZE = 12
 
-    config = {
-        "epochs": 2,
-        "deep_supervision": False,
-        "num_classes": 3,
-        "input_channels": 3,
-        "optimizer": "SGD",
-        "model": "UNet",
-        "min_lr": 1e-5,
-        "lr": 1e-3,
-        "loss": "BCEWithLogitsLoss",
-        "scheduler": "CosineAnnealingLR"
-    }
+    config = vars(parse_arguments())
 
-    unet_dataset = UNetDataClass(IMAGE_TRAINING_PATH, IMAGE_GT_PATH)
+
+    train_loss_array = list()
+    test_loss_array = list()
+    best_loss = -1e9
+    use_wandb = True
+    trigger = 0
+
+    if use_wandb:
+        wandb.login(
+            key="42a6113f1cb8bfc726e81b54b5b43967cdb2a437",
+        )
+        wandb.init(
+            project="PolypSegment"
+        )
+
     unet_dataset = UNetDataClass(IMAGE_TRAINING_PATH, IMAGE_GT_PATH)
 
     train_set, valid_set = random_split(unet_dataset,
-                                        [int(TRAIN_SIZE * len(unet_dataset)) ,
+                                        [int(TRAIN_SIZE * len(unet_dataset)),
                                          int(VALID_SIZE * len(unet_dataset))])
 
-    train_dataloader = DataLoader(train_set, batch_size=BATCH_SIZE, shuffle=True)
-    valid_dataloader = DataLoader(valid_set, batch_size=BATCH_SIZE, shuffle=True)
+    train_dataloader = DataLoader(train_set, batch_size=config["batch_size"], shuffle=True)
+    valid_dataloader = DataLoader(valid_set, batch_size=config["batch_size"], shuffle=True)
 
     model, optimizer, scheduler, criterion = initialize(config)
-
-    best_iou = 0
-    trigger = 0
-    log = OrderedDict([
-        ('epoch', []),
-        ('lr', []),
-        ('loss', []),
-        ('iou', []),
-        ('val_loss', []),
-        ('val_iou', []),
-    ])
 
     for epoch in range(config['epochs']):
         print('Epoch [%d/%d]' % (epoch, config['epochs']))
 
-        # train for one epoch
         train_log = train(config, train_dataloader, model, criterion, optimizer)
-        # evaluate on validation set
         val_log = validate(config, valid_dataloader, model, criterion)
 
         if config['scheduler'] == 'CosineAnnealingLR':
             scheduler.step()
 
-        print('loss %.4f - iou %.4f - val_loss %.4f - val_iou %.4f'
-              % (train_log['loss'], train_log['iou'], val_log['loss'], val_log['iou']))
-
-        log['epoch'].append(epoch)
-        log['lr'].append(config['lr'])
-        log['loss'].append(train_log['loss'])
-        log['iou'].append(train_log['iou'])
-        log['val_loss'].append(val_log['loss'])
-        log['val_iou'].append(val_log['iou'])
-
-        pd.DataFrame(log).to_csv('models/%s/log.csv' %
-                                 config['name'], index=False)
-
         trigger += 1
 
-        if val_log['iou'] > best_iou:
-            torch.save(model.state_dict(), 'models/%s/model.pth' %
-                       config['name'])
-            best_iou = val_log['iou']
+        if val_log["loss"] < best_loss:
+            save_model(model, optimizer, config["checkpoint_path"])
+            best_loss = val_log["loss"]
             print("=> saved best model")
             trigger = 0
 
         # early stopping
-        if config['early_stopping'] >= 0 and trigger >= config['early_stopping']:
+        if 0 <= config['early_stopping'] <= trigger:
             print("=> early stopping")
             break
+
+        torch.cuda.empty_cache()
+
+        train_loss_array.append(train_log["loss"])
+        test_loss_array.append(val_log["loss"])
+        
+        if use_wandb:
+            wandb.log({"Train loss": train_log["loss"], "Valid loss": val_log["loss"]})
 
         torch.cuda.empty_cache()
