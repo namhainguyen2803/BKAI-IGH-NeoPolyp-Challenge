@@ -2,6 +2,7 @@ import torch
 from torch import nn
 from timm import create_model
 from typing import Optional, List
+import torch.nn.functional as F
 
 __all__ = ['UNet', 'PretrainedUNet', 'NestedUNet']
 
@@ -101,7 +102,9 @@ class PretrainedUNet(nn.Module):
                     param.requires_grad = False
         return
 
-    def _preprocess_input(self, x, input_range=[0, 1], inplace=False):
+    def _preprocess_input(self, x, input_range=None, inplace=False):
+        if input_range is None:
+            input_range = [0, 1]
         if not x.is_floating_point():
             raise TypeError(f"Input tensor should be a float tensor. Got {x.dtype}.")
 

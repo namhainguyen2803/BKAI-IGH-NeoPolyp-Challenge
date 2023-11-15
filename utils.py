@@ -1,4 +1,3 @@
-import argparse
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -73,3 +72,4 @@ def dice_score(output, y_target):
 
     dice_score = (2 * intersection + 1e-6) / (cardinality + 1e-6)
     return torch.mean(dice_score)
+

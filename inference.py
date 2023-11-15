@@ -3,8 +3,8 @@ import numpy as np
 import pandas as pd
 import torch
 import torch.nn.functional as F
-from torch.utils.data import Dataset, DataLoader, random_split
-from torchvision.transforms import Resize, PILToTensor, ToPILImage, Compose, InterpolationMode
+from torch.utils.data import DataLoader
+from torchvision.transforms import Resize, ToPILImage, InterpolationMode
 import os
 from dataloader import UNetTestDataClass
 from models import *
@@ -35,14 +35,14 @@ def rle_encode_one_mask(mask):
     return rle_to_string(rle)
 
 
-def mask2string(dir):
+def mask2string(di):
     ## mask --> string
     strings = []
     ids = []
     ws, hs = [[] for i in range(2)]
-    for image_id in os.listdir(dir):
+    for image_id in os.listdir(di):
         id = image_id.split('.')[0]
-        path = os.path.join(dir, image_id)
+        path = os.path.join(di, image_id)
         print(path)
         img = cv2.imread(path)[:, :, ::-1]
         h, w = img.shape[0], img.shape[1]
@@ -98,9 +98,7 @@ def main():
                 ToPILImage()(F.one_hot(torch.argmax(predicted_mask[i], 0)).permute(2, 0, 1).float()))
             mask2img.save(os.path.join(PREDICTED_MASK_PATH, filename))
 
-    MASK_DIR_PATH = PREDICTED_MASK_PATH  # change this to the path to your output mask folder
-    dir = MASK_DIR_PATH
-    res = mask2string(dir)
+    res = mask2string(PREDICTED_MASK_PATH)
     df = pd.DataFrame(columns=['Id', 'Expected'])
     df['Id'] = res['ids']
     df['Expected'] = res['strings']

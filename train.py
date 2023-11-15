@@ -1,5 +1,4 @@
 from tqdm import tqdm
-from collections import OrderedDict
 from utils import *
 from models import *
 from dataloader import *
@@ -10,7 +9,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.optim import lr_scheduler
 from collections import OrderedDict
-from torch.utils.data import Dataset, DataLoader, random_split
+from torch.utils.data import DataLoader, random_split
 import wandb
 import argparse
 
@@ -31,7 +30,7 @@ def train(config, train_loader, model, criterion, optimizer):
             for output in outputs:
                 loss += criterion(output, target)
             loss /= len(outputs)
-            dice = dice_score(output, target)
+            dice = dice_score(outputs[-1], target)
         else:
             output = model(input)
             loss = criterion(output, target)

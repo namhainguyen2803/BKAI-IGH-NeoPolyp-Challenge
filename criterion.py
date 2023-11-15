@@ -51,3 +51,4 @@ class CEDiceLoss(nn.Module):
         dice_score = torch.sum(dice_score * self.weights, dim=1)
 
         return torch.mean(1. - dice_score) + celoss
+
