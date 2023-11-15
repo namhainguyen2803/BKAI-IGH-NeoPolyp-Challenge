@@ -96,6 +96,8 @@ def initialize(config):
         model = UNet(config['num_classes'],config['input_channels'])
     elif config['model'] == 'NestedUNet':
         model = NestedUNet(config['num_classes'],config['input_channels'],config['deep_supervision'])
+    if config['model'] == 'PretrainedUNet':
+        model = PretrainedUNet(num_classes=config['num_classes'],in_channels=config['input_channels'])
     else:
         raise NotImplementedError
 
@@ -123,15 +125,15 @@ def initialize(config):
     return model.to(DEVICE), optimizer, scheduler, criterion.to(DEVICE)
 
 def parse_arguments():
-    parser = argparse.ArgumentParser(description='Your script description here.')
+    parser = argparse.ArgumentParser(description='Hello')
 
     # Add arguments
-    parser.add_argument('--epochs', type=int, default=2, help='Number of training epochs')
-    parser.add_argument('--deep_supervision', action='store_true', help='Use deep supervision')
+    parser.add_argument('--epochs', type=int, default=1, help='Number of training epochs')
+    parser.add_argument('--deep_supervision', action='store_true', help='Use deep supervision for UNet++')
     parser.add_argument('--num_classes', type=int, default=3, help='Number of classes')
     parser.add_argument('--input_channels', type=int, default=3, help='Number of input channels')
     parser.add_argument('--optimizer', type=str, default='SGD', help='Optimizer choice')
-    parser.add_argument('--model', type=str, default='UNet', help='Model architecture')
+    parser.add_argument('--model', type=str, default='PretrainedUNet', help='Model architecture')
     parser.add_argument('--min_lr', type=float, default=1e-5, help='Minimum learning rate')
     parser.add_argument('--lr', type=float, default=1e-3, help='Learning rate')
     parser.add_argument('--loss', type=str, default='CEDiceLoss', help='Loss function')
@@ -148,6 +150,12 @@ def main():
 
     IMAGE_TRAINING_PATH = "dataset/train/train"
     IMAGE_GT_PATH = "dataset/train_gt/train_gt"
+    IMAGE_TESTING_PATH=  "dataset/test/test"
+
+    CHECKPOINT_DIR = "checkpoint"
+
+    if not os.path.exists(CHECKPOINT_DIR):
+        os.makedirs(CHECKPOINT_DIR)
 
     TRAIN_SIZE = 0.8
     VALID_SIZE = 0.2
@@ -192,7 +200,18 @@ def main():
         trigger += 1
 
         if val_log["loss"] < best_loss:
-            save_model(model, optimizer, config["checkpoint_path"])
+            checkpoint = {
+                "model_name": config["model"],
+                "model": model.state_dict(),
+                "optimizer": optimizer.state_dict(),
+                "epoch": epoch,
+                "num_classes": config["num_classes"],
+                "deep_supervision": config["deep_supervision"],
+                "input_channels": config["input_channels"]
+            }
+
+            torch.save(checkpoint, config["checkpoint_path"])
+
             best_loss = val_log["loss"]
             print("=> saved best model")
             trigger = 0
@@ -206,7 +225,7 @@ def main():
 
         train_loss_array.append(train_log["loss"])
         test_loss_array.append(val_log["loss"])
-        
+
         if use_wandb:
             wandb.log({"Train loss": train_log["loss"], "Valid loss": val_log["loss"]})
 
