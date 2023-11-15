@@ -2,14 +2,24 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+
 def count_params(model):
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
 
 def _to_one_hot(y, num_classes):
+    """
+    Convert a categorical tensor to one-hot encoded tensor
+    :param y: must be in type int or long, can be tensor, matrix, vector
+    :param num_classes: number of categories
+    :return: one-hot encoded vector for each element of y
+    """
     scatter_dim = len(y.size())
     y_tensor = y.view(*y.size(), -1)
-    zeros = torch.zeros(*y.size(), num_classes, dtype=y.dtype)
+    zeros = torch.zeros(*y.size(), num_classes, dtype=y.dtype).to(DEVICE)
 
     return zeros.scatter(scatter_dim, y_tensor, 1)
 
@@ -54,9 +64,9 @@ def dice_score(output, y_target):
     """
     Handle dice score for multi-classes case:
 
-        if red segment then y_target == 0
-        if green segment then y_target == 1
-        if background then y_target == 2
+        if red segment then y_target == 1
+        if green segment then y_target == 2
+        if background then y_target == 0
 
     :param output: (N, C, H, W)
     :param y_target: (N, H, W)
@@ -64,8 +74,8 @@ def dice_score(output, y_target):
     """
 
     y_predict = torch.argmax(output, dim=1)
-    one_hot_y_pred = F.one_hot(y_predict)
-    one_hot_y_target = F.one_hot(y_target)
+    one_hot_y_pred = _to_one_hot(y_predict, 3)
+    one_hot_y_target = _to_one_hot(y_target, 3)
 
     intersection = torch.sum(one_hot_y_pred * one_hot_y_target, dim=1)
     cardinality = torch.sum(one_hot_y_pred + one_hot_y_target, dim=1)

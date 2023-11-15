@@ -3,6 +3,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torchgeometry.losses import one_hot
 
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 class CEDiceLoss(nn.Module):
     def __init__(self, weights) -> None:
         super(CEDiceLoss, self).__init__()

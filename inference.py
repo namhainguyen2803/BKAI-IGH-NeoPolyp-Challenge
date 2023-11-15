@@ -8,11 +8,11 @@ from torchvision.transforms import Resize, ToPILImage, InterpolationMode
 import os
 from dataloader import UNetTestDataClass
 from models import *
-
+from dataloader2 import *
 PREDICTED_MASK_PATH = "predicted_masks"
 IMAGE_TESTING_PATH = "dataset/test/test"
 CHECKPOINT_FILE = 'checkpoint/model.pth'
-
+TEST_BATCH_SIZE = 2
 
 def rle_to_string(runs):
     return ' '.join(str(x) for x in runs)
@@ -78,8 +78,10 @@ def main():
     model.load_state_dict(loaded_checkpoint['model'])
     model.eval()
 
-    unet_test_dataset = UNetTestDataClass(IMAGE_TESTING_PATH)
-    test_dataloader = DataLoader(unet_test_dataset, batch_size=2, shuffle=True)
+    all_dataset = SplitDataset(testing_images_path=IMAGE_TESTING_PATH)
+    test_set = all_dataset.create_testing_set()
+
+    test_dataloader = DataLoader(test_set, batch_size=TEST_BATCH_SIZE, shuffle=True)
 
     if not os.path.isdir(PREDICTED_MASK_PATH):
         os.mkdir(PREDICTED_MASK_PATH)

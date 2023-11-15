@@ -1,15 +1,15 @@
 from tqdm import tqdm
 from utils import *
 from models import *
-from dataloader import *
 from criterion import *
+from dataloader2 import *
 
 import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.optim import lr_scheduler
 from collections import OrderedDict
-from torch.utils.data import DataLoader, random_split
+from torch.utils.data import DataLoader
 import wandb
 import argparse
 
@@ -21,6 +21,8 @@ def train(config, train_loader, model, criterion, optimizer):
     model.train()
     pbar = tqdm(total=len(train_loader))
     for input, target in train_loader:
+
+        target = target.squeeze(dim=1).long()
         input = input.to(DEVICE)
         target = target.to(DEVICE)
 
@@ -60,7 +62,10 @@ def validate(config, val_loader, model, criterion):
     model.eval()
     with torch.no_grad():
         pbar = tqdm(total=len(val_loader))
+
         for input, target in val_loader:
+
+            target = target.squeeze(dim=1).long()
             input = input.to(DEVICE)
             target = target.to(DEVICE)
             # compute output
@@ -127,18 +132,18 @@ def parse_arguments():
     parser = argparse.ArgumentParser(description='Hello')
 
     # Add arguments
-    parser.add_argument('--epochs', type=int, default=1, help='Number of training epochs')
+    parser.add_argument('--epochs', type=int, default=30, help='Number of training epochs')
     parser.add_argument('--deep_supervision', action='store_true', help='Use deep supervision for UNet++')
     parser.add_argument('--num_classes', type=int, default=3, help='Number of classes')
     parser.add_argument('--input_channels', type=int, default=3, help='Number of input channels')
-    parser.add_argument('--optimizer', type=str, default='SGD', help='Optimizer choice')
+    parser.add_argument('--optimizer', type=str, default='Adam', help='Optimizer choice')
     parser.add_argument('--model', type=str, default='PretrainedUNet', help='Model architecture')
     parser.add_argument('--min_lr', type=float, default=1e-5, help='Minimum learning rate')
     parser.add_argument('--lr', type=float, default=1e-3, help='Learning rate')
     parser.add_argument('--loss', type=str, default='CEDiceLoss', help='Loss function')
     parser.add_argument('--scheduler', type=str, default='CosineAnnealingLR', help='Learning rate scheduler')
-    parser.add_argument('--batch_size', type=int, default=2, help='Batch size')
-    parser.add_argument('--early_stopping', type=int, default=10, help='Early stopping patience')
+    parser.add_argument('--batch_size', type=int, default=4, help='Batch size')
+    parser.add_argument('--early_stopping', type=int, default=8, help='Early stopping patience')
     parser.add_argument('--checkpoint_path', type=str, default='checkpoint/model.pth', help='Path to save checkpoints')
 
     args = parser.parse_args()
@@ -149,15 +154,11 @@ def main():
 
     IMAGE_TRAINING_PATH = "dataset/train/train"
     IMAGE_GT_PATH = "dataset/train_gt/train_gt"
-    IMAGE_TESTING_PATH=  "dataset/test/test"
 
     CHECKPOINT_DIR = "checkpoint"
 
     if not os.path.exists(CHECKPOINT_DIR):
         os.makedirs(CHECKPOINT_DIR)
-
-    TRAIN_SIZE = 0.8
-    VALID_SIZE = 0.2
 
     config = vars(parse_arguments())
 
@@ -176,11 +177,10 @@ def main():
             project="PolypSegment"
         )
 
-    unet_dataset = UNetDataClass(IMAGE_TRAINING_PATH, IMAGE_GT_PATH)
+    all_dataset = SplitDataset(training_images_path=IMAGE_TRAINING_PATH,
+                               training_masks_path=IMAGE_GT_PATH)
 
-    train_set, valid_set = random_split(unet_dataset,
-                                        [int(TRAIN_SIZE * len(unet_dataset)),
-                                         int(VALID_SIZE * len(unet_dataset))])
+    train_set, valid_set = all_dataset.create_training_set()
 
     train_dataloader = DataLoader(train_set, batch_size=config["batch_size"], shuffle=True)
     valid_dataloader = DataLoader(valid_set, batch_size=config["batch_size"], shuffle=True)
