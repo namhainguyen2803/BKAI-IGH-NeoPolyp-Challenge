@@ -230,3 +230,6 @@ def main():
             wandb.log({"Train loss": train_log["loss"], "Valid loss": val_log["loss"]})
 
         torch.cuda.empty_cache()
+
+if __name__ == "__main__":
+    main()

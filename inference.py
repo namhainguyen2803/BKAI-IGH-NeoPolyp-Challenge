@@ -11,46 +11,7 @@ from models import *
 
 PREDICTED_MASK_PATH = "predicted_masks"
 IMAGE_TESTING_PATH = "dataset/test/test"
-CHECKPOINT_PATH = 'checkpoint/model.pth'
-
-loaded_checkpoint = torch.load(CHECKPOINT_PATH)
-model_name = loaded_checkpoint['model_name']
-last_epoch = loaded_checkpoint['epoch']
-num_classes = loaded_checkpoint['num_classes']
-inp_channels = loaded_checkpoint['input_channels']
-deep_supervision = loaded_checkpoint['deep_supervision']
-
-if model_name == 'UNet':
-    model = UNet(num_classes, inp_channels)
-elif model_name == 'NestedUNet':
-    model = NestedUNet(num_classes, inp_channels, deep_supervision)
-if model_name == 'PretrainedUNet':
-    model = PretrainedUNet(num_classes=num_classes, in_channels=inp_channels)
-else:
-    raise NotImplementedError
-
-model.load_state_dict(loaded_checkpoint['model_state_dict'])
-model.eval()
-
-unet_test_dataset = UNetTestDataClass(IMAGE_TESTING_PATH)
-test_dataloader = DataLoader(unet_test_dataset, batch_size=2, shuffle=True)
-
-if not os.path.isdir(PREDICTED_MASK_PATH):
-    os.mkdir(PREDICTED_MASK_PATH)
-for _, (img, path, H, W) in enumerate(test_dataloader):
-    a = path
-    b = img
-    h = H
-    w = W
-
-    with torch.no_grad():
-        predicted_mask = model(b)
-    for i in range(len(a)):
-        image_id = a[i].split('/')[-1].split('.')[0]
-        filename = image_id + ".png"
-        mask2img = Resize((h[i].item(), w[i].item()), interpolation=InterpolationMode.NEAREST)(
-            ToPILImage()(F.one_hot(torch.argmax(predicted_mask[i], 0)).permute(2, 0, 1).float()))
-        mask2img.save(os.path.join(PREDICTED_MASK_PATH, filename))
+CHECKPOINT_FILE = 'checkpoint/model.pth'
 
 
 def rle_to_string(runs):
@@ -97,11 +58,53 @@ def mask2string(dir):
     }
     return r
 
+def main():
+    loaded_checkpoint = torch.load(CHECKPOINT_FILE)
+    model_name = loaded_checkpoint['model_name']
+    last_epoch = loaded_checkpoint['epoch']
+    num_classes = loaded_checkpoint['num_classes']
+    inp_channels = loaded_checkpoint['input_channels']
+    deep_supervision = loaded_checkpoint['deep_supervision']
 
-MASK_DIR_PATH = PREDICTED_MASK_PATH  # change this to the path to your output mask folder
-dir = MASK_DIR_PATH
-res = mask2string(dir)
-df = pd.DataFrame(columns=['Id', 'Expected'])
-df['Id'] = res['ids']
-df['Expected'] = res['strings']
-df.to_csv(r'output.csv', index=False)
+    if model_name == 'UNet':
+        model = UNet(num_classes, inp_channels)
+    elif model_name == 'NestedUNet':
+        model = NestedUNet(num_classes, inp_channels, deep_supervision)
+    if model_name == 'PretrainedUNet':
+        model = PretrainedUNet(num_classes=num_classes, in_channels=inp_channels)
+    else:
+        raise NotImplementedError
+
+    model.load_state_dict(loaded_checkpoint['model'])
+    model.eval()
+
+    unet_test_dataset = UNetTestDataClass(IMAGE_TESTING_PATH)
+    test_dataloader = DataLoader(unet_test_dataset, batch_size=2, shuffle=True)
+
+    if not os.path.isdir(PREDICTED_MASK_PATH):
+        os.mkdir(PREDICTED_MASK_PATH)
+    for _, (img, path, H, W) in enumerate(test_dataloader):
+        a = path
+        b = img
+        h = H
+        w = W
+
+        with torch.no_grad():
+            predicted_mask = model(b)
+        for i in range(len(a)):
+            image_id = a[i].split('/')[-1].split('.')[0]
+            filename = image_id + ".png"
+            mask2img = Resize((h[i].item(), w[i].item()), interpolation=InterpolationMode.NEAREST)(
+                ToPILImage()(F.one_hot(torch.argmax(predicted_mask[i], 0)).permute(2, 0, 1).float()))
+            mask2img.save(os.path.join(PREDICTED_MASK_PATH, filename))
+
+    MASK_DIR_PATH = PREDICTED_MASK_PATH  # change this to the path to your output mask folder
+    dir = MASK_DIR_PATH
+    res = mask2string(dir)
+    df = pd.DataFrame(columns=['Id', 'Expected'])
+    df['Id'] = res['ids']
+    df['Expected'] = res['strings']
+    df.to_csv(r'output.csv', index=False)
+
+if __name__ == "__main__":
+    main()
