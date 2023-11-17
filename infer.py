@@ -56,7 +56,7 @@ def parse_arguments():
 
     # Add arguments
     parser.add_argument('--epochs', type=int, default=2, help='Number of testing epochs')
-    parser.add_argument('--checkpoint_file_type', type=str, default='zip', help='checkpoint file is zip or pth?')
+    parser.add_argument('--checkpoint_file_type', type=str, default='ggdrive', help='checkpoint file is zip or pth?')
     parser.add_argument('--checkpoint_ggdrive', type=str, default='https://drive.google.com/file/d/17IEmiObweFG1a7U8-l5zsl_-6aychTrK/view?usp=share_link', help='Path to checkpoint gg drive')
     parser.add_argument('--checkpoint_path', type=str, default='checkpoint/model_end.pth', help='Path to checkpoint file')
     parser.add_argument('--checkpoint_zip', type=str, default='checkpoint/model_end.zip', help='Path to checkpoint zip')
@@ -80,10 +80,10 @@ def main():
         # Download the file from Google Drive
         gdown.download(url, CHECKPOINT_FILE, quiet=False)
 
-
-    if config["checkpoint_file_type"] == "zip":
+    elif config["checkpoint_file_type"] == "zip":
         print(f"File to unzip: {config['checkpoint_zip']}, check if file exists: {os.path.exists(config['checkpoint_zip'])}")
         CHECKPOINT_FILE = extract_zip_file(config["checkpoint_zip"])
+        
     else:
         CHECKPOINT_FILE = config["checkpoint_path"]
 
