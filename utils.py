@@ -67,14 +67,13 @@ def load_model(model, optimizer, path):
     optimizer.load_state_dict(checkpoint['optimizer'])
     return model, optimizer
 
-
 def dice_score(output, y_target):
     """
     Handle dice score for multi-classes case:
 
-        if red segment then y_target == 1
-        if green segment then y_target == 2
-        if background then y_target == 0
+        if red segment then y_target == 0
+        if green segment then y_target == 1
+        if background then y_target == 2
 
     :param output: (N, C, H, W)
     :param y_target: (N, H, W)
@@ -82,12 +81,13 @@ def dice_score(output, y_target):
     """
 
     y_predict = torch.argmax(output, dim=1)
-    one_hot_y_pred = _to_one_hot(y_predict, 3)
-    one_hot_y_target = _to_one_hot(y_target, 3)
+    one_hot_y_pred = _to_one_hot(y_predict, 3).permute(0,3,1,2)
+    one_hot_y_target = _to_one_hot(y_target, 3).permute(0,3,1,2)
 
-    intersection = torch.sum(one_hot_y_pred * one_hot_y_target, dim=1)
-    cardinality = torch.sum(one_hot_y_pred + one_hot_y_target, dim=1)
 
-    dice_score = (2 * intersection + 1e-6) / (cardinality + 1e-6)
+    intersection = torch.sum(one_hot_y_pred * one_hot_y_target, dim=(2,3))
+    cardinality = torch.sum(one_hot_y_pred + one_hot_y_target, dim=(2,3))
+
+    dice_score = (2 * intersection) / (cardinality + 1e-6)
     return torch.mean(dice_score)
 
