@@ -67,22 +67,22 @@ This project utilizes the following libraries (all are mentioned in requirements
 
 ### Required dependencies installation
 
-'''bash
+```bash
 !pip install -r requirements.txt
-'''
+```
 
 ### Training script
 
-'''bash
+```bash
 !python3 train.py --epochs 300
-'''
+```
 
 
 ### Evaluation script
 
-'''bash
+```bash
 !python3 infer.py
-'''
+```
 
 
 
