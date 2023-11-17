@@ -91,7 +91,8 @@ def main():
     elif model_name == 'NestedUNet':
         model = NestedUNet(num_classes, inp_channels, deep_supervision).to(DEVICE)
     if model_name == 'PretrainedUNet':
-        model = PretrainedUNet(num_classes=num_classes, in_channels=inp_channels).to(DEVICE)
+        model = PretrainedUNet(num_classes=num_classes, in_channels=inp_channels,
+                               backbone=loaded_checkpoint["backbone"]).to(DEVICE)
     else:
         raise NotImplementedError
 

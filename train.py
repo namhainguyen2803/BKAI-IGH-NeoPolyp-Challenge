@@ -56,6 +56,22 @@ def train(config, train_loader, model, criterion, optimizer):
         pbar.update(1)
     pbar.close()
 
+    if config["plot_training_image"]:
+        label = target[0].detach().clone()
+        output = outputs[0].detach().clone()
+        label = label.cpu().numpy()
+        label = mask_to_rgb(label)
+        output = output.softmax(dim=0)
+        output = output.cpu().numpy()
+        output = np.argmax(output, axis=0)
+        output = mask_to_rgb(output)
+        fig, axs = plt.subplots(1, 2, figsize=(10, 5))
+        axs[0].imshow(label)
+        axs[0].set_title('Label')
+        axs[1].imshow(output)
+        axs[1].set_title('Output')
+        plt.show()
+
     return OrderedDict([
         ('loss', avg_meters['loss'].avg),
         ('dice', avg_meters['dice'].avg)
@@ -98,6 +114,22 @@ def validate(config, val_loader, model, criterion):
             pbar.set_postfix(postfix)
             pbar.update(1)
         pbar.close()
+
+    if config["plot_training_image"]:
+        label = target[0].detach().clone()
+        output = outputs[0].detach().clone()
+        label = label.cpu().numpy()
+        label = mask_to_rgb(label)
+        output = output.softmax(dim=0)
+        output = output.cpu().numpy()
+        output = np.argmax(output, axis=0)
+        output = mask_to_rgb(output)
+        fig, axs = plt.subplots(1, 2, figsize=(10, 5))
+        axs[0].imshow(label)
+        axs[0].set_title('Label')
+        axs[1].imshow(output)
+        axs[1].set_title('Output')
+        plt.show()
 
     return OrderedDict([
         ('loss', avg_meters['loss'].avg),
@@ -147,10 +179,12 @@ def parse_arguments():
     # Add arguments
     parser.add_argument('--epochs', type=int, default=30, help='Number of training epochs')
     parser.add_argument('--deep_supervision', action='store_true', help='Use deep supervision for UNet++')
+    parser.add_argument('--plot_training_image', action='store_true', help='Plot image for each epoch')
     parser.add_argument('--num_classes', type=int, default=3, help='Number of classes')
     parser.add_argument('--input_channels', type=int, default=3, help='Number of input channels')
     parser.add_argument('--optimizer', type=str, default='Adam', help='Optimizer choice')
     parser.add_argument('--model', type=str, default='PretrainedUNet', help='Model architecture')
+    parser.add_argument('--backbone', type=str, default='resnet152', help='Backbone of model architecture')
     parser.add_argument('--min_lr', type=float, default=1e-5, help='Minimum learning rate')
     parser.add_argument('--lr', type=float, default=1e-3, help='Learning rate')
     parser.add_argument('--loss', type=str, default='CEDiceLoss', help='Loss function')
@@ -216,6 +250,7 @@ def main():
             checkpoint = {
                 "model_name": config["model"],
                 "model": model.state_dict(),
+                "backbone": config["backbone"],
                 "optimizer": optimizer.state_dict(),
                 "epoch": epoch,
                 "num_classes": config["num_classes"],
@@ -246,10 +281,10 @@ def main():
 
         torch.cuda.empty_cache()
 
-
     checkpoint = {
         "model_name": config["model"],
         "model": model.state_dict(),
+        "backbone": config["backbone"],
         "optimizer": optimizer.state_dict(),
         "epoch": -1,
         "num_classes": config["num_classes"],
