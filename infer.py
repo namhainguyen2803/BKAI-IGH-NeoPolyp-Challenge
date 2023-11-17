@@ -73,16 +73,12 @@ def main():
     if config["checkpoint_file_type"] == "ggdrive":
 
         file_id = '17IEmiObweFG1a7U8-l5zsl_-6aychTrK'
-
-        # Define the URL to fetch the file
         url = f'https://drive.google.com/uc?id={file_id}'
-
-        # Define the destination path where the file will be stored
+        
         CHECKPOINT_FILE = 'pretrained_weights.pth'
 
         print(f"Pre-trained weight file located in: {CHECKPOINT_FILE}")
 
-        # Download the file from Google Drive
         gdown.download(url, CHECKPOINT_FILE, quiet=False)
 
     elif config["checkpoint_file_type"] == "zip":
