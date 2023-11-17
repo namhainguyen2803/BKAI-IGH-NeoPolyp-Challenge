@@ -74,6 +74,7 @@ def main():
     else:
         CHECKPOINT_FILE = config["checkpoint_path"]
 
+    print(f"Checkpoint path for validation: {CHECKPOINT_FILE}")
     IMAGE_TESTING_PATH = config["test_image_path"]
     TEST_BATCH_SIZE = config["epochs"]
     PREDICTED_MASK_PATH = config["predicted_path"]
