@@ -15,10 +15,13 @@ import argparse
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+
 def train(config, train_loader, model, criterion, optimizer):
     avg_meters = {'loss': AverageMeter(),
                   'dice': AverageMeter()}
+
     model.train()
+
     pbar = tqdm(total=len(train_loader))
     for input, target in train_loader:
 
@@ -29,14 +32,16 @@ def train(config, train_loader, model, criterion, optimizer):
         if config['deep_supervision']:
             outputs = model(input)
             loss = 0
+            dice = 0
             for output in outputs:
                 loss += criterion(output, target)
+                dice += dice_score(outputs.clone().detach(), target)
             loss /= len(outputs)
-            dice = dice_score(outputs[-1], target)
+            dice /= len(outputs)
         else:
-            output = model(input)
-            loss = criterion(output, target)
-            dice = dice_score(output, target)
+            outputs = model(input)
+            loss = criterion(outputs, target.long())
+            dice = dice_score(outputs.clone().detach(), target)
 
         optimizer.zero_grad()
         loss.backward()
@@ -44,42 +49,46 @@ def train(config, train_loader, model, criterion, optimizer):
         avg_meters['loss'].update(loss.item(), input.size(0))
         avg_meters['dice'].update(dice.item(), input.size(0))
         postfix = OrderedDict([
-                ('loss', avg_meters['loss'].avg),
-                ('dice', avg_meters['dice'].avg)
-            ])
+            ('loss', avg_meters['loss'].avg),
+            ('dice', avg_meters['dice'].avg)
+        ])
         pbar.set_postfix(postfix)
         pbar.update(1)
     pbar.close()
+
     return OrderedDict([
-                ('loss', avg_meters['loss'].avg),
-                ('dice', avg_meters['dice'].avg)
-            ])
+        ('loss', avg_meters['loss'].avg),
+        ('dice', avg_meters['dice'].avg)
+    ])
+
 
 def validate(config, val_loader, model, criterion):
     avg_meters = {"loss": AverageMeter(),
                   "dice": AverageMeter()}
-    # switch to evaluate mode
+
     model.eval()
     with torch.no_grad():
         pbar = tqdm(total=len(val_loader))
-
         for input, target in val_loader:
 
             target = target.squeeze(dim=1).long()
             input = input.to(DEVICE)
             target = target.to(DEVICE)
-            # compute output
+
             if config['deep_supervision']:
                 outputs = model(input)
                 loss = 0
+                dice = 0
                 for output in outputs:
                     loss += criterion(output, target)
+                    dice += dice_score(outputs.clone().detach(), target)
                 loss /= len(outputs)
-                dice = dice_score(output, target)
+                dice /= len(outputs)
             else:
-                output = model(input)
-                loss = criterion(output, target)
-                dice = dice_score(output, target)
+                outputs = model(input)
+                loss = criterion(outputs, target)
+                dice = dice_score(outputs.clone().detach(), target)
+
             avg_meters['loss'].update(loss.item(), input.size(0))
             avg_meters['dice'].update(dice.item(), input.size(0))
             postfix = OrderedDict([
@@ -89,19 +98,21 @@ def validate(config, val_loader, model, criterion):
             pbar.set_postfix(postfix)
             pbar.update(1)
         pbar.close()
-    return OrderedDict([
-                ('loss', avg_meters['loss'].avg),
-                ('dice', avg_meters['dice'].avg)
-            ])
 
+    return OrderedDict([
+        ('loss', avg_meters['loss'].avg),
+        ('dice', avg_meters['dice'].avg)
+    ])
 def initialize(config):
 
     if config['model'] == 'UNet':
         model = UNet(config['num_classes'],config['input_channels'])
+        weights_init(model)
     elif config['model'] == 'NestedUNet':
         model = NestedUNet(config['num_classes'],config['input_channels'],config['deep_supervision'])
+        weights_init(model)
     if config['model'] == 'PretrainedUNet':
-        model = PretrainedUNet(num_classes=config['num_classes'],in_channels=config['input_channels'])
+        model = PretrainedUNet(num_classes=config['num_classes'],in_channels=config['input_channels'],backbone='resnet152')
     else:
         raise NotImplementedError
 
@@ -118,11 +129,13 @@ def initialize(config):
     else:
         raise NotImplementedError
 
-    if config['loss'] == 'CEDiceLoss':
-        weights = torch.Tensor([[0.4, 0.55, 0.05]]).to(DEVICE)
-        criterion = CEDiceLoss(weights).to(DEVICE)
-    elif config['loss'] == 'CrossEntropyLoss':
+    if config['loss'] == 'CrossEntropyLoss':
         criterion = nn.CrossEntropyLoss().to(DEVICE)
+    elif config['loss'] == 'CEDiceLoss':
+        unormed_weight = torch.Tensor([[0.05, 0.4, 0.45]])
+        normed_weight = unormed_weight / torch.sum(unormed_weight)
+        weights = normed_weight.to(DEVICE)
+        criterion = CEDiceLoss(weights).to(DEVICE)
     else:
         raise NotImplementedError
 
@@ -142,9 +155,10 @@ def parse_arguments():
     parser.add_argument('--lr', type=float, default=1e-3, help='Learning rate')
     parser.add_argument('--loss', type=str, default='CEDiceLoss', help='Loss function')
     parser.add_argument('--scheduler', type=str, default='CosineAnnealingLR', help='Learning rate scheduler')
-    parser.add_argument('--batch_size', type=int, default=4, help='Batch size')
+    parser.add_argument('--batch_size', type=int, default=8, help='Batch size')
     parser.add_argument('--early_stopping', type=int, default=8, help='Early stopping patience')
     parser.add_argument('--checkpoint_path', type=str, default='checkpoint/model.pth', help='Path to save checkpoints')
+    parser.add_argument('--checkpoint_end_epoch_path', type=str, default='checkpoint/model_end.pth', help='Path to save checkpoints at the end')
 
     args = parser.parse_args()
 
@@ -216,9 +230,9 @@ def main():
             trigger = 0
 
         # early stopping
-        if 0 <= config['early_stopping'] <= trigger:
-            print("=> early stopping")
-            break
+        # if 0 <= config['early_stopping'] <= trigger:
+        #     print("=> early stopping")
+        #     break
 
         torch.cuda.empty_cache()
 
@@ -229,6 +243,22 @@ def main():
             wandb.log({"Train loss": train_log["loss"], "Valid loss": val_log["loss"]})
 
         torch.cuda.empty_cache()
+
+    if trigger != 0:
+
+        checkpoint = {
+            "model_name": config["model"],
+            "model": model.state_dict(),
+            "optimizer": optimizer.state_dict(),
+            "epoch": -1,
+            "num_classes": config["num_classes"],
+            "deep_supervision": config["deep_supervision"],
+            "input_channels": config["input_channels"]
+        }
+
+        torch.save(checkpoint, config["checkpoint_end_epoch_path"])
+
+    print(trigger)  # if trigger == 0 then checkpoint_path == checkpoint_end_epoch_path
 
 if __name__ == "__main__":
     main()

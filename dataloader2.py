@@ -1,5 +1,4 @@
 import random
-
 import numpy as np
 import cv2
 from torch.utils.data import Dataset
@@ -9,6 +8,7 @@ import os
 import torch
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 
 class SplitDataset:
 
@@ -56,14 +56,13 @@ class SplitDataset:
 
 
 class UNetDataClass(Dataset):
-    def __init__(self, purpose, images_list, masks_list=None, resize=(256,256)):
+    def __init__(self, purpose, images_list, masks_list=None):
         super(UNetDataClass, self).__init__()
 
         self.transform = None
         self.purpose = purpose
         self.images_list = images_list
         self.masks_list = masks_list
-        self.resize = resize
 
         self.smart_transform()
 
@@ -71,51 +70,56 @@ class UNetDataClass(Dataset):
 
         if self.purpose == "train":
             self.transform = A.Compose([
-                        A.HorizontalFlip(p=0.5),
-                        A.VerticalFlip(p=0.5),
-                        A.RandomGamma(gamma_limit=(70, 130), eps=None, always_apply=False, p=0.2),
-                        A.RGBShift(p=0.3, r_shift_limit=10, g_shift_limit=10, b_shift_limit=10),
-                        A.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
-                        ToTensorV2(),
-                    ])
+                A.Resize(256, 256),
+                A.ShiftScaleRotate(shift_limit=0.2, scale_limit=0.2, rotate_limit=30, p=0.5),
+                A.RGBShift(r_shift_limit=25, g_shift_limit=25, b_shift_limit=25, p=0.5),
+                A.RandomBrightnessContrast(brightness_limit=0.3, contrast_limit=0.3, p=0.5),
+                A.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
+                ToTensorV2(),
+            ])
+
+            # self.transform = A.Compose([
+            #             A.HorizontalFlip(p=0.5),
+            #             A.VerticalFlip(p=0.5),
+            #             A.RandomGamma(gamma_limit=(70, 130), eps=None, always_apply=False, p=0.2),
+            #             A.RGBShift(p=0.3, r_shift_limit=10, g_shift_limit=10, b_shift_limit=10),
+            #             A.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
+            #             ToTensorV2(),
+            #         ])
+
         else:
             self.transform = A.Compose([
-                        A.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
-                        ToTensorV2(),
-                    ])
+                A.Resize(256, 256),
+                A.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
+                ToTensorV2(),
+            ])
+
     def __getitem__(self, idx):
-        
-        if self.purpose == "train" or self.purpose == 'validation':
+
+        if self.purpose == "train" or self.purpose == "validation":
             img_path = self.images_list[idx]
             label_path = self.masks_list[idx]
             image = cv2.imread(img_path)
             image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
             label = self.read_mask(label_path)
-            image = cv2.resize(image, self.resize)
 
-            transformed = self.transform(image=image, mask=label)
-            image = transformed["image"].float()
-            label = transformed["mask"].float()
-            label = label.permute(2, 0, 1)
-
+            transform_img_label = self.transform(image=image, mask=label)
+            image = transform_img_label["image"].float()
+            label = transform_img_label["mask"].float().permute(2, 0, 1)
             return image, label
 
         elif self.purpose == "test":
             img_path = self.images_list[idx]
-            ori_img = cv2.imread(img_path)
-            ori_img = cv2.cvtColor(ori_img, cv2.COLOR_BGR2RGB)
-            ori_w = ori_img.shape[0]
-            ori_h = ori_img.shape[1]
-            img = cv2.resize(ori_img, self.resize)
-            input_img = self.transform(image=img)["image"]
-            return input_img, img_path, ori_h, ori_w
+            image = cv2.imread(img_path)
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+            w = image.shape[0]
+            h = image.shape[1]
+            input_img = self.transform(image=image)["image"]
+            return input_img, img_path, h, w
 
     def read_mask(self, mask_path):
         # Read the image from the specified path using OpenCV
         image = cv2.imread(mask_path)
-
-        # Resize the image to the specified dimensions
-        image = cv2.resize(image, self.resize)
 
         # Convert the image to the HSV color space
         image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)

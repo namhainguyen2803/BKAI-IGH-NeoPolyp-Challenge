@@ -1,9 +1,24 @@
+import numpy as np
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-
+from matplotlib import pyplot as plt
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+def display_images(img):
+    img_array = img.permute(1, 2, 0).numpy()
+    plt.imshow(img_array)
+    plt.axis('off')
+    plt.show()
+
+def mask_to_rgb(mask):
+    color_dict = {0: (0, 0, 0),
+                  1: (255, 0, 0),
+                  2: (0, 255, 0)}
+    output = np.zeros((*mask.shape, 3), dtype=np.uint8)
+    for k, color in color_dict.items():
+        output[mask == k] = color
+    return output
 
 
 def count_params(model):
@@ -45,13 +60,6 @@ def weights_init(model):
     if isinstance(model, nn.Linear):
         # Xavier Distribution
         torch.nn.init.xavier_uniform_(model.weight)
-
-def save_model(model, optimizer, path):
-    checkpoint = {
-        "model": model.state_dict(),
-        "optimizer": optimizer.state_dict(),
-    }
-    torch.save(checkpoint, path)
 
 def load_model(model, optimizer, path):
     checkpoint = torch.load(path)

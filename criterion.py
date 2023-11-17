@@ -1,6 +1,9 @@
+from typing import Tuple, Any
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch import Tensor
 from torchgeometry.losses import one_hot
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -14,7 +17,7 @@ class CEDiceLoss(nn.Module):
     def forward(
             self,
             input: torch.Tensor,
-            target: torch.Tensor) -> torch.Tensor:
+            target: torch.Tensor) -> tuple[Tensor, Any]:
         if not torch.is_tensor(input):
             raise TypeError("Input type is not a torch.Tensor. Got {}"
                             .format(type(input)))
