@@ -102,18 +102,20 @@ def main():
 
     loaded_checkpoint = torch.load(CHECKPOINT_FILE)
 
-    model_name = loaded_checkpoint['model_name']
-    last_epoch = loaded_checkpoint['epoch']
-    num_classes = loaded_checkpoint['num_classes']
-    inp_channels = loaded_checkpoint['input_channels']
+    model_name = loaded_checkpoint['model_name'] if 'model_name' in loaded_checkpoint else 'PretrainedUNet'
+    last_epoch = loaded_checkpoint['epoch'] if 'epoch' in loaded_checkpoint else -1
+    num_classes = loaded_checkpoint['num_classes'] if 'num_classes' in loaded_checkpoint else 3
+    inp_channels = loaded_checkpoint['input_channels'] if 'input_channels' else 3
 
     if model_name == 'UNet':
         model = UNet(num_classes, inp_channels).to(DEVICE)
     elif model_name == 'NestedUNet':
-        model = NestedUNet(num_classes, inp_channels, loaded_checkpoint['deep_supervision']).to(DEVICE)
+        ds = loaded_checkpoint['deep_supervision'] if 'deep_supervision' in loaded_checkpoint else True
+        model = NestedUNet(num_classes, inp_channels, ds).to(DEVICE)
     if model_name == 'PretrainedUNet':
+        backbone_arch = loaded_checkpoint["backbone"] if 'backbone' in loaded_checkpoint else 'resnet152'
         model = PretrainedUNet(num_classes=num_classes, in_channels=inp_channels,
-                               backbone=loaded_checkpoint["backbone"]).to(DEVICE)
+                               backbone=backbone_arch).to(DEVICE)
     else:
         raise NotImplementedError
 
