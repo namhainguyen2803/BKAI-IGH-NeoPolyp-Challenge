@@ -296,5 +296,12 @@ def main():
 
     print(trigger)  # if trigger == 0 then checkpoint_path == checkpoint_end_epoch_path
 
+    # zip pretrained weight file
+    zip_end_checkpoint = config["checkpoint_end_epoch_path"].rsplit(".", 1)[0] + ".zip"
+    create_zip_file(file_to_zip=config["checkpoint_end_epoch_path"], zip_file_name=zip_end_checkpoint)
+
+    zip_checkpoint = config["checkpoint_path"].rsplit(".", 1)[0] + ".zip"
+    create_zip_file(file_to_zip=config["checkpoint_end_epoch_path"], zip_file_name=zip_checkpoint)
+
 if __name__ == "__main__":
     main()

@@ -1,3 +1,6 @@
+import os
+import zipfile
+
 import numpy as np
 import torch
 import torch.nn as nn
@@ -90,4 +93,14 @@ def dice_score(output, y_target):
 
     dice_score = (2 * intersection) / (cardinality + 1e-6)
     return torch.mean(dice_score)
+
+def create_zip_file(file_to_zip, zip_file_name):
+    with zipfile.ZipFile(zip_file_name, 'w') as zipf:
+        zipf.write(file_to_zip, os.path.basename(file_to_zip))
+    return zip_file_name
+
+
+def extract_zip_file(zip_file_path):
+    with zipfile.ZipFile(zip_file_path, 'r') as zip_ref:
+        zip_ref.extractall('checkpoint/')
 

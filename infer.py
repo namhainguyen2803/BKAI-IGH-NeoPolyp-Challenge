@@ -6,10 +6,6 @@ from models import *
 from dataloader2 import *
 from utils import *
 
-IMAGE_TESTING_PATH = "dataset/test/test"
-CHECKPOINT_FILE = "checkpoint/model.pth"
-END_CHECKPOINT_FILE = "checkpoint/model_end.pth"
-
 def rle_to_string(runs):
     return ' '.join(str(x) for x in runs)
 
@@ -60,7 +56,9 @@ def parse_arguments():
 
     # Add arguments
     parser.add_argument('--epochs', type=int, default=2, help='Number of testing epochs')
-    parser.add_argument('--checkpoint_type', type=str, default='CHECKPOINT_FILE', help='Type of checkpoint')
+    parser.add_argument('--checkpoint_path', type=str, default='checkpoint/model.pth', help='Path to checkpoint file')
+    parser.add_argument('--checkpoint_zip', type=str, default='checkpoint/model.zip', help='Path to checkpoint zip')
+    parser.add_argument('--test_image_path', type=str, default='dataset/test/test', help='Path to test image file')
     parser.add_argument('--predicted_path', type=str, default='predicted_masks', help='Predicted mask folder')
 
     args = parser.parse_args()
@@ -70,26 +68,24 @@ def parse_arguments():
 def main():
     config = vars(parse_arguments())
 
-    if config["checkpoint_type"] == "CHECKPOINT_FILE":
-        loaded_checkpoint = torch.load(CHECKPOINT_FILE)
-    elif config["checkpoint_type"] == "END_CHECKPOINT_FILE":
-        loaded_checkpoint = torch.load(END_CHECKPOINT_FILE)
-    else:
-        raise "There are only two types of checkpoint: [CHECKPOINT_FILE, END_CHECKPOINT_FILE]"
+    extract_zip_file('checkpoint_zip')
+
+    CHECKPOINT_FILE = config["checkpoint_path"]
+    IMAGE_TESTING_PATH = config["test_image_path"]
     TEST_BATCH_SIZE = config["epochs"]
     PREDICTED_MASK_PATH = config["predicted_path"]
 
+    loaded_checkpoint = torch.load(CHECKPOINT_FILE)
 
     model_name = loaded_checkpoint['model_name']
     last_epoch = loaded_checkpoint['epoch']
     num_classes = loaded_checkpoint['num_classes']
     inp_channels = loaded_checkpoint['input_channels']
-    deep_supervision = loaded_checkpoint['deep_supervision']
 
     if model_name == 'UNet':
         model = UNet(num_classes, inp_channels).to(DEVICE)
     elif model_name == 'NestedUNet':
-        model = NestedUNet(num_classes, inp_channels, deep_supervision).to(DEVICE)
+        model = NestedUNet(num_classes, inp_channels, loaded_checkpoint['deep_supervision']).to(DEVICE)
     if model_name == 'PretrainedUNet':
         model = PretrainedUNet(num_classes=num_classes, in_channels=inp_channels,
                                backbone=loaded_checkpoint["backbone"]).to(DEVICE)
