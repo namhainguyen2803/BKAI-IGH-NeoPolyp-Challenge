@@ -72,8 +72,6 @@ def main():
 
     if config["checkpoint_file_type"] == "ggdrive":
 
-        # url = config["checkpoint_ggdrive"]
-
         file_id = '17IEmiObweFG1a7U8-l5zsl_-6aychTrK'
 
         # Define the URL to fetch the file
@@ -105,7 +103,7 @@ def main():
     model_name = loaded_checkpoint['model_name'] if 'model_name' in loaded_checkpoint else 'PretrainedUNet'
     last_epoch = loaded_checkpoint['epoch'] if 'epoch' in loaded_checkpoint else -1
     num_classes = loaded_checkpoint['num_classes'] if 'num_classes' in loaded_checkpoint else 3
-    inp_channels = loaded_checkpoint['input_channels'] if 'input_channels' else 3
+    inp_channels = loaded_checkpoint['input_channels'] if 'input_channels' in loaded_checkpoint else 3
 
     if model_name == 'UNet':
         model = UNet(num_classes, inp_channels).to(DEVICE)
