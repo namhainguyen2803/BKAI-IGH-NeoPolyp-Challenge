@@ -179,7 +179,7 @@ def main():
 
     train_loss_array = list()
     test_loss_array = list()
-    best_loss = -1e9
+    best_loss = 1e9
     use_wandb = True
     trigger = 0
 
@@ -240,23 +240,24 @@ def main():
         test_loss_array.append(val_log["loss"])
 
         if use_wandb:
-            wandb.log({"Train loss": train_log["loss"], "Valid loss": val_log["loss"]})
+            wandb.log({"Train loss": train_log["loss"],
+                       "Valid loss": val_log["loss"],
+                       "Valid dice coefficient": val_log["dice"]})
 
         torch.cuda.empty_cache()
 
-    if trigger != 0:
 
-        checkpoint = {
-            "model_name": config["model"],
-            "model": model.state_dict(),
-            "optimizer": optimizer.state_dict(),
-            "epoch": -1,
-            "num_classes": config["num_classes"],
-            "deep_supervision": config["deep_supervision"],
-            "input_channels": config["input_channels"]
-        }
+    checkpoint = {
+        "model_name": config["model"],
+        "model": model.state_dict(),
+        "optimizer": optimizer.state_dict(),
+        "epoch": -1,
+        "num_classes": config["num_classes"],
+        "deep_supervision": config["deep_supervision"],
+        "input_channels": config["input_channels"]
+    }
 
-        torch.save(checkpoint, config["checkpoint_end_epoch_path"])
+    torch.save(checkpoint, config["checkpoint_end_epoch_path"])
 
     print(trigger)  # if trigger == 0 then checkpoint_path == checkpoint_end_epoch_path
 

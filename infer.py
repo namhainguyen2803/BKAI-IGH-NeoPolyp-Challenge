@@ -1,12 +1,14 @@
+import argparse
+
 import pandas as pd
 from torch.utils.data import DataLoader
 from models import *
 from dataloader2 import *
 from utils import *
-PREDICTED_MASK_PATH = "predicted_masks"
+
 IMAGE_TESTING_PATH = "dataset/test/test"
-CHECKPOINT_FILE = 'checkpoint/model.pth'
-TEST_BATCH_SIZE = 2
+CHECKPOINT_FILE = "checkpoint/model.pth"
+END_CHECKPOINT_FILE = "checkpoint/model_end.pth"
 
 def rle_to_string(runs):
     return ' '.join(str(x) for x in runs)
@@ -53,9 +55,31 @@ def mask2string(dir):
     }
     return r
 
+def parse_arguments():
+    parser = argparse.ArgumentParser(description='Hello')
+
+    # Add arguments
+    parser.add_argument('--epochs', type=int, default=2, help='Number of testing epochs')
+    parser.add_argument('--checkpoint_type', type=str, default='CHECKPOINT_FILE', help='Type of checkpoint')
+    parser.add_argument('--predicted_path', type=str, default='predicted_masks', help='Predicted mask folder')
+
+    args = parser.parse_args()
+
+    return args
 
 def main():
-    loaded_checkpoint = torch.load(CHECKPOINT_FILE)
+    config = vars(parse_arguments())
+
+    if config["checkpoint_type"] == "CHECKPOINT_FILE":
+        loaded_checkpoint = torch.load(CHECKPOINT_FILE)
+    elif config["checkpoint_type"] == "END_CHECKPOINT_FILE":
+        loaded_checkpoint = torch.load(END_CHECKPOINT_FILE)
+    else:
+        raise "There are only two types of checkpoint: [CHECKPOINT_FILE, END_CHECKPOINT_FILE]"
+    TEST_BATCH_SIZE = config["epochs"]
+    PREDICTED_MASK_PATH = config["predicted_path"]
+
+
     model_name = loaded_checkpoint['model_name']
     last_epoch = loaded_checkpoint['epoch']
     num_classes = loaded_checkpoint['num_classes']
