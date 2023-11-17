@@ -98,6 +98,7 @@ def main():
 
     model.load_state_dict(loaded_checkpoint['model'])
     model.eval()
+    model = model.to('cpu')
 
     all_dataset = SplitDataset(testing_images_path=IMAGE_TESTING_PATH)
     test_set = all_dataset.create_testing_set()
