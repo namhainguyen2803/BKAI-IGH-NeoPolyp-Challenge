@@ -63,11 +63,11 @@ def main():
     deep_supervision = loaded_checkpoint['deep_supervision']
 
     if model_name == 'UNet':
-        model = UNet(num_classes, inp_channels)
+        model = UNet(num_classes, inp_channels).to(DEVICE)
     elif model_name == 'NestedUNet':
-        model = NestedUNet(num_classes, inp_channels, deep_supervision)
+        model = NestedUNet(num_classes, inp_channels, deep_supervision).to(DEVICE)
     if model_name == 'PretrainedUNet':
-        model = PretrainedUNet(num_classes=num_classes, in_channels=inp_channels)
+        model = PretrainedUNet(num_classes=num_classes, in_channels=inp_channels).to(DEVICE)
     else:
         raise NotImplementedError
 
