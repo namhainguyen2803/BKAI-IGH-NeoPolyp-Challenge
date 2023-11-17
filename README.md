@@ -51,7 +51,7 @@ This project utilizes the following libraries (all are mentioned in requirements
 2. Use the following commands in a code cell:
 
 ```bash
-!git clone https://github.com/namhainguyen2803/BKAI-IGH-NeoPolyp-Challenge.git /kaggle/working/BKAI-IGH-NeoPolyp-Challenge
+!git clone https://github.com/namhainguyen2803/BKAI-IGH-NeoPolyp-Challenge.git
 %cd /kaggle/working/BKAI-IGH-NeoPolyp-Challenge
 ```
 
@@ -61,9 +61,28 @@ This project utilizes the following libraries (all are mentioned in requirements
 2. Use the following commands in a code cell:
 
 ```bash
-!git clone https://github.com/namhainguyen2803/BKAI-IGH-NeoPolyp-Challenge.git /content/BKAI-IGH-NeoPolyp-Challenge
+!git clone https://github.com/namhainguyen2803/BKAI-IGH-NeoPolyp-Challenge.git
 %cd /content/BKAI-IGH-NeoPolyp-Challenge
 ```
+
+### Required dependencies installation
+
+'''bash
+!pip install -r requirements.txt
+'''
+
+### Training script
+
+'''bash
+!python3 train.py --epochs 300
+'''
+
+
+### Evaluation script
+
+'''bash
+!python3 infer.py
+'''
 
 
 
