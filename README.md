@@ -80,9 +80,21 @@ This project utilizes the following libraries (all are mentioned in requirements
 
 ### Evaluation script
 
+#### Pretrained weight of UNet using backbone as Resnet152
+```bash
+https://drive.google.com/file/d/17IEmiObweFG1a7U8-l5zsl_-6aychTrK/view?usp=share_link
+```
+
 ```bash
 !python3 infer.py
 ```
+
+
+
+
+
+
+
 
 
 
