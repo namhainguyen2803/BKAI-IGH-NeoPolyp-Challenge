@@ -45,9 +45,21 @@ This project utilizes the following libraries (all are mentioned in requirements
 
 ### Setup Process
 
-1. Clone the project repository:
+To clone this repository on Kaggle, follow these steps:
 
-   ```bash
-   git clone https://github.com/namhainguyen2803/BKAI-IGH-NeoPolyp-Challenge.git
-   cd your-repository
+1. Open a Kaggle Notebook.
+2. Use the following commands in a code cell:
+
+```bash
+!git clone https://github.com/namhainguyen2803/BKAI-IGH-NeoPolyp-Challenge.git /kaggle/working/BKAI-IGH-NeoPolyp-Challenge
+%cd /kaggle/working/BKAI-IGH-NeoPolyp-Challenge
+
+To clone this repository on Google Colab, follow these steps:
+
+1. Open a Google Colab Notebook.
+2. Use the following commands in a code cell:
+
+```bash
+!git clone https://github.com/namhainguyen2803/BKAI-IGH-NeoPolyp-Challenge.git /content/BKAI-IGH-NeoPolyp-Challenge
+%cd /content/BKAI-IGH-NeoPolyp-Challenge
 
