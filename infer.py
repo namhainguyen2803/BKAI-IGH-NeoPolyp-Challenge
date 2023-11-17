@@ -70,11 +70,13 @@ def main():
     config = vars(parse_arguments())
 
     if config["checkpoint_file_type"] == "zip":
+        print(f"File to unzip: {config['checkpoint_zip']}")
         CHECKPOINT_FILE = extract_zip_file(config["checkpoint_zip"])
     else:
         CHECKPOINT_FILE = config["checkpoint_path"]
 
     print(f"Checkpoint path for validation: {CHECKPOINT_FILE}")
+
     IMAGE_TESTING_PATH = config["test_image_path"]
     TEST_BATCH_SIZE = config["epochs"]
     PREDICTED_MASK_PATH = config["predicted_path"]
