@@ -53,6 +53,7 @@ This project utilizes the following libraries (all are mentioned in requirements
 ```bash
 !git clone https://github.com/namhainguyen2803/BKAI-IGH-NeoPolyp-Challenge.git /kaggle/working/BKAI-IGH-NeoPolyp-Challenge
 %cd /kaggle/working/BKAI-IGH-NeoPolyp-Challenge
+```
 
 #### Clone this repository on Google Colab
 
@@ -62,4 +63,10 @@ This project utilizes the following libraries (all are mentioned in requirements
 ```bash
 !git clone https://github.com/namhainguyen2803/BKAI-IGH-NeoPolyp-Challenge.git /content/BKAI-IGH-NeoPolyp-Challenge
 %cd /content/BKAI-IGH-NeoPolyp-Challenge
+```
+
+
+
+
+
 
