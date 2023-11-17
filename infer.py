@@ -74,7 +74,7 @@ def main():
 
         file_id = '17IEmiObweFG1a7U8-l5zsl_-6aychTrK'
         url = f'https://drive.google.com/uc?id={file_id}'
-        
+
         CHECKPOINT_FILE = 'pretrained_weights.pth'
 
         print(f"Pre-trained weight file located in: {CHECKPOINT_FILE}")

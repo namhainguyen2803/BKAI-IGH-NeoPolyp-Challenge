@@ -40,6 +40,7 @@ This project utilizes the following libraries (all are mentioned in requirements
 - **torchvision** (version 0.15.1)
 - **Pillow** (version 9.5.0)
 - **albumentations** (version 1.3.1)
+- **gdown**
 
 ## Pretrained weight of UNet using backbone as Resnet152
 ```bash
