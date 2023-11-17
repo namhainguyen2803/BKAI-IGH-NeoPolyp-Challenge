@@ -5,7 +5,7 @@ from torch.utils.data import DataLoader
 from models import *
 from dataloader2 import *
 from utils import *
-
+import gdown
 def rle_to_string(runs):
     return ' '.join(str(x) for x in runs)
 
@@ -57,6 +57,7 @@ def parse_arguments():
     # Add arguments
     parser.add_argument('--epochs', type=int, default=2, help='Number of testing epochs')
     parser.add_argument('--checkpoint_file_type', type=str, default='zip', help='checkpoint file is zip or pth?')
+    parser.add_argument('--checkpoint_ggdrive', type=str, default='https://drive.google.com/file/d/17IEmiObweFG1a7U8-l5zsl_-6aychTrK/view?usp=share_link', help='Path to checkpoint gg drive')
     parser.add_argument('--checkpoint_path', type=str, default='checkpoint/model.pth', help='Path to checkpoint file')
     parser.add_argument('--checkpoint_zip', type=str, default='checkpoint/model.zip', help='Path to checkpoint zip')
     parser.add_argument('--test_image_path', type=str, default='dataset/test/test', help='Path to test image file')
@@ -68,6 +69,17 @@ def parse_arguments():
 
 def main():
     config = vars(parse_arguments())
+
+    if config["checkpoint_file_type"] == "ggdrive":
+
+        url = config["checkpoint_ggdrive"]
+
+        # Define the destination path where the file will be stored
+        CHECKPOINT_FILE = 'checkpoint/pretrained_weights.pth'
+
+        # Download the file from Google Drive
+        gdown.download(url, CHECKPOINT_FILE, quiet=False)
+
 
     if config["checkpoint_file_type"] == "zip":
         print(f"File to unzip: {config['checkpoint_zip']}, check if file exists: {os.path.exists(config['checkpoint_zip'])}")

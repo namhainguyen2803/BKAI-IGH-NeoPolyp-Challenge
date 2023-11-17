@@ -102,7 +102,6 @@ def create_zip_file(file_to_zip, zip_file_name):
 
 def extract_zip_file(zip_file_path):
     target_folder = os.path.join(os.path.dirname(zip_file_path), "unzip")
-    print(target_folder)
     if not os.path.exists(target_folder):
         os.makedirs(target_folder)
     absolute_path, relative_path = ("/" + zip_file_path).rsplit("/", 1)
@@ -110,4 +109,6 @@ def extract_zip_file(zip_file_path):
     with zipfile.ZipFile(zip_file_path, 'r') as zip_ref:
         zip_ref.extractall(target_folder)
     return absolute_unzip_path
+
+
 
