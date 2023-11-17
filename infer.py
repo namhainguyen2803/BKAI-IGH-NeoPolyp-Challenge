@@ -56,6 +56,7 @@ def parse_arguments():
 
     # Add arguments
     parser.add_argument('--epochs', type=int, default=2, help='Number of testing epochs')
+    parser.add_argument('--checkpoint_file_type', type=str, default='zip', help='checkpoint file is zip or pth?')
     parser.add_argument('--checkpoint_path', type=str, default='checkpoint/model.pth', help='Path to checkpoint file')
     parser.add_argument('--checkpoint_zip', type=str, default='checkpoint/model.zip', help='Path to checkpoint zip')
     parser.add_argument('--test_image_path', type=str, default='dataset/test/test', help='Path to test image file')
@@ -68,9 +69,11 @@ def parse_arguments():
 def main():
     config = vars(parse_arguments())
 
-    extract_zip_file('checkpoint_zip')
+    if config["checkpoint_file_type"] == "zip":
+        CHECKPOINT_FILE = extract_zip_file(config["checkpoint_zip"])
+    else:
+        CHECKPOINT_FILE = config["checkpoint_path"]
 
-    CHECKPOINT_FILE = config["checkpoint_path"]
     IMAGE_TESTING_PATH = config["test_image_path"]
     TEST_BATCH_SIZE = config["epochs"]
     PREDICTED_MASK_PATH = config["predicted_path"]

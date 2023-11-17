@@ -101,6 +101,10 @@ def create_zip_file(file_to_zip, zip_file_name):
 
 
 def extract_zip_file(zip_file_path):
+    absolute_path, relative_path = zip_file_path.rsplit("/", 1)
+    extracted_folder = absolute_path + "/unzip"
+    absolute_unzip_path = extracted_folder + "/" + relative_path.replace("zip", "pth")
     with zipfile.ZipFile(zip_file_path, 'r') as zip_ref:
-        zip_ref.extractall('checkpoint/')
+        zip_ref.extractall(extracted_folder)
+    return absolute_unzip_path
 
