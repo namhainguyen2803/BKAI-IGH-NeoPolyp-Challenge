@@ -70,7 +70,7 @@ def main():
     config = vars(parse_arguments())
 
     if config["checkpoint_file_type"] == "zip":
-        print(f"File to unzip: {config['checkpoint_zip']}")
+        print(f"File to unzip: {config['checkpoint_zip']}, check if file exists: {os.path.exists(config['checkpoint_zip'])}")
         CHECKPOINT_FILE = extract_zip_file(config["checkpoint_zip"])
     else:
         CHECKPOINT_FILE = config["checkpoint_path"]
