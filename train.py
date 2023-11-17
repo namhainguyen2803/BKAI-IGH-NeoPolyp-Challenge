@@ -303,7 +303,7 @@ def main():
     print(f"Save check point at: {zip_end_checkpoint}")
 
     zip_checkpoint = config["checkpoint_path"].rsplit(".", 1)[0] + ".zip"
-    create_zip_file(file_to_zip=config["checkpoint_end_epoch_path"], zip_file_name=zip_checkpoint)
+    create_zip_file(file_to_zip=config["checkpoint_path"], zip_file_name=zip_checkpoint)
 
     print(f"Save check point at: {zip_checkpoint}")
 
