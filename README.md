@@ -1,1 +1,1 @@
-# deep-learning-assignment
+# BKAI IGH NeoPolyp Challenge
