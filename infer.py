@@ -77,13 +77,15 @@ def main():
         # Define the destination path where the file will be stored
         CHECKPOINT_FILE = 'pretrained_weights.pth'
 
+        print(f"Pre-trained weight file located in: {CHECKPOINT_FILE}")
+
         # Download the file from Google Drive
         gdown.download(url, CHECKPOINT_FILE, quiet=False)
 
     elif config["checkpoint_file_type"] == "zip":
         print(f"File to unzip: {config['checkpoint_zip']}, check if file exists: {os.path.exists(config['checkpoint_zip'])}")
         CHECKPOINT_FILE = extract_zip_file(config["checkpoint_zip"])
-        
+
     else:
         CHECKPOINT_FILE = config["checkpoint_path"]
 
