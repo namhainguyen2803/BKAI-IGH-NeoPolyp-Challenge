@@ -24,9 +24,9 @@ The BKAI-IGH NeoPolyp-Small dataset is a publicly available dataset curated by t
 
 The result evaluated on the public dataset is currently **0.76958**
 
-### Configuration
+## Configuration
 
-This project utilizes the following libraries:
+This project utilizes the following libraries (all are mentioned in requirements.txt):
 
 - **torchsummary**
 - **wandb** (version 0.16.0)
@@ -40,4 +40,14 @@ This project utilizes the following libraries:
 - **torchvision** (version 0.15.1)
 - **Pillow** (version 9.5.0)
 - **albumentations** (version 1.3.1)
+
+## Usage Instructions
+
+### Setup Process
+
+1. Clone the project repository:
+
+   ```bash
+   git clone https://github.com/namhainguyen2803/BKAI-IGH-NeoPolyp-Challenge.git
+   cd your-repository
 
