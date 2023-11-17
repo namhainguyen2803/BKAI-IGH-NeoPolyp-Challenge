@@ -13,11 +13,6 @@ from torch.utils.data import DataLoader
 import wandb
 import argparse
 
-# from pydrive.auth import GoogleAuth
-# from pydrive.drive import GoogleDrive
-
-from google_drive_downloader import GoogleDriveDownloader
-
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
